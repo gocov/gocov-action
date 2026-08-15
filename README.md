@@ -1,5 +1,8 @@
 # gocov-action
 
+![coverage](https://app.gocov.dev/badge/gocov/gocov-action.svg)
+![ci](https://github.com/gocov/gocov-action/actions/workflows/ci.yml/badge.svg)
+
 Upload Go test coverage to [gocov](https://app.gocov.dev) from GitHub
 Actions: PR diff coverage, commit statuses and a README badge, on the
 hosted service or your own server.
