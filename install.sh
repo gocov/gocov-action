@@ -42,13 +42,13 @@ curl -fsSL --retry 3 --retry-delay 2 -o "$dir/$asset" "$base/$asset" ||
 curl -fsSL --retry 3 --retry-delay 2 -o "$dir/checksums.txt" "$base/checksums.txt" ||
   fail "could not download checksums.txt from gocov/gocov release $GOCOV_VERSION"
 
-# The trailing tr strips the "\" that sha256sum prefixes in its escaped
-# output format, triggered on Windows by backslashes in $RUNNER_TEMP.
+# gsub strips the "\" that sha256sum prefixes in its escaped output
+# format, triggered on Windows by backslashes in $RUNNER_TEMP.
 sha256() {
   if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | awk '{print $1}' | tr -d '\\'
+    sha256sum "$1" | awk '{gsub(/\\/, ""); print $1}'
   else
-    shasum -a 256 "$1" | awk '{print $1}' | tr -d '\\'
+    shasum -a 256 "$1" | awk '{gsub(/\\/, ""); print $1}'
   fi
 }
 
