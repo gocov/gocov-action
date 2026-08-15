@@ -1,0 +1,72 @@
+# Composite action (not Docker): downloads the pinned gocov CLI release
+# binary, verifies its sha256 against the release's checksums.txt, and runs
+# `gocov upload`. Repo/commit/branch/PR detection lives in the CLI, which
+# reads the GitHub Actions environment — this action only installs and runs.
+name: gocov coverage upload
+author: gocov
+description: >-
+  Upload Go test coverage to gocov — PR diff coverage, commit statuses and
+  badges, hosted or self-hosted.
+branding:
+  # Marketplace only offers fixed colors; green is the closest to the
+  # landing page's teal.
+  icon: upload-cloud
+  color: green
+
+inputs:
+  files:
+    description: >-
+      Coverage profile file(s) to upload. Comma-separated, globs allowed
+      (e.g. "coverage.out" or "cover/*.out").
+    required: true
+  token:
+    description: >-
+      gocov upload token for the repo. Store it as a repository secret and
+      pass ${{ secrets.GOCOV_TOKEN }}.
+    required: true
+  part:
+    description: >-
+      Label for this upload when a build's coverage is split across matrix
+      jobs; the server merges parts uploaded for the same commit. Requires a
+      gocov CLI version with multi-part upload support (set "version" until
+      the default pin includes it).
+    required: false
+    default: ""
+  server:
+    description: gocov server URL. Override when self-hosting.
+    required: false
+    default: https://app.gocov.dev
+  fail-on-error:
+    description: >-
+      Fail the workflow when installing the CLI or uploading fails. Set
+      "false" to emit a warning instead.
+    required: false
+    default: "true"
+  version:
+    description: >-
+      gocov CLI version to download, as a gocov/gocov release tag. The
+      default is the version this action release was tested against.
+    required: false
+    default: v0.8.3
+
+runs:
+  using: composite
+  steps:
+    # Inputs are passed via env, never interpolated into the script text,
+    # so input values cannot inject shell.
+    - name: Install gocov CLI
+      shell: bash
+      env:
+        GOCOV_VERSION: ${{ inputs.version }}
+        GOCOV_FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
+      run: bash "$GITHUB_ACTION_PATH/install.sh"
+
+    - name: Upload coverage
+      shell: bash
+      env:
+        GOCOV_FILES: ${{ inputs.files }}
+        GOCOV_TOKEN: ${{ inputs.token }}
+        GOCOV_SERVER: ${{ inputs.server }}
+        GOCOV_PART: ${{ inputs.part }}
+        GOCOV_FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
+      run: bash "$GITHUB_ACTION_PATH/upload.sh"
