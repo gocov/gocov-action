@@ -8,6 +8,12 @@ on:
 permissions:
   contents: read
 
+# Windows' default pwsh mangles `-coverprofile=coverage.out`; use bash
+# everywhere.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   lint:
     runs-on: ubuntu-latest
