@@ -25,6 +25,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      # secrets isn't available in step-level `if`, so surface the check here.
+      HAVE_GOCOV_TOKEN: ${{ secrets.GOCOV_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -38,7 +41,7 @@ jobs:
       # TODO: add `part: ${{ matrix.os }}` once the pinned CLI supports
       # multi-part uploads (gocov/gocov PR#25); v0.8.3 doesn't yet.
       - name: Upload with the action
-        if: ${{ secrets.GOCOV_TOKEN != '' }}
+        if: ${{ env.HAVE_GOCOV_TOKEN == 'true' }}
         uses: ./
         with:
           files: selftest/coverage.out
