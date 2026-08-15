@@ -21,8 +21,8 @@ inputs:
     required: true
   token:
     description: >-
-      gocov upload token for the repo. Store it as a repository secret and
-      pass ${{ secrets.GOCOV_TOKEN }}.
+      gocov upload token for the repo. Store it as a repository secret
+      (GOCOV_TOKEN) and pass it via the secrets context.
     required: true
   part:
     description: >-
