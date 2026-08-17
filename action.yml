@@ -5,8 +5,8 @@
 name: gocov coverage upload
 author: gocov
 description: >-
-  Upload Go test coverage to gocov — PR diff coverage, commit statuses and
-  badges, hosted or self-hosted.
+  Upload test coverage (Go, JS/TS, Java, Python & more) to gocov — PR diff
+  coverage, commit statuses and badges, hosted or self-hosted.
 branding:
   # Marketplace only offers fixed colors; green is the closest to the
   # landing page's teal.
@@ -27,9 +27,8 @@ inputs:
   part:
     description: >-
       Label for this upload when a build's coverage is split across matrix
-      jobs; the server merges parts uploaded for the same commit. Requires a
-      gocov CLI version with multi-part upload support (set "version" until
-      the default pin includes it).
+      jobs (e.g. "backend", "frontend", "e2e"); the server merges the parts
+      uploaded for the same commit into one report.
     required: false
     default: ""
   server:
@@ -47,7 +46,7 @@ inputs:
       gocov CLI version to download, as a gocov/gocov release tag. The
       default is the version this action release was tested against.
     required: false
-    default: v0.8.3
+    default: v0.9.0
 
 runs:
   using: composite

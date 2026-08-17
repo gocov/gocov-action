@@ -3,9 +3,10 @@
 ![coverage](https://app.gocov.dev/badge/gocov/gocov-action.svg)
 ![ci](https://github.com/gocov/gocov-action/actions/workflows/ci.yml/badge.svg)
 
-Upload Go test coverage to [gocov](https://app.gocov.dev) from GitHub
-Actions: PR diff coverage, commit statuses and a README badge, on the
-hosted service or your own server.
+Upload test coverage to [gocov](https://app.gocov.dev) from GitHub Actions —
+Go, JavaScript/TypeScript (LCOV), Java (JaCoCo), Python (Cobertura) and more:
+PR diff coverage, commit statuses and a README badge, on the hosted service
+or your own server.
 
 ## Quickstart
 
@@ -24,6 +25,40 @@ Then add the badge to your README:
 ```markdown
 ![coverage](https://app.gocov.dev/badge/{workspace}/{repo}.svg)
 ```
+
+### Splitting coverage across jobs (matrix)
+
+When a commit's coverage comes from several jobs — a Go backend, a
+JS/TS frontend, an e2e suite — give each upload a `part`. gocov merges the
+parts uploaded for the same commit into one report, so the status, badge,
+gate and PR comment reflect the combined total instead of whichever job
+finished last:
+
+```yaml
+jobs:
+  backend:
+    steps:
+      - uses: actions/checkout@v4
+      - run: go test -coverprofile=coverage.out ./...
+      - uses: gocov/gocov-action@v1
+        with:
+          files: coverage.out
+          token: ${{ secrets.GOCOV_TOKEN }}
+          part: backend
+  frontend:
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm test -- --coverage       # writes coverage/lcov.info
+      - uses: gocov/gocov-action@v1
+        with:
+          files: coverage/lcov.info
+          token: ${{ secrets.GOCOV_TOKEN }}
+          part: frontend
+```
+
+Re-running a job replaces its part rather than double-counting. Uploads with
+no `part` land in a single `default` bucket, so single-job setups are
+unchanged.
 
 ### Adding the token
 
