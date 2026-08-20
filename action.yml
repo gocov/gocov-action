@@ -46,7 +46,7 @@ inputs:
       gocov CLI version to download, as a gocov/gocov release tag. The
       default is the version this action release was tested against.
     required: false
-    default: v0.9.0
+    default: v0.11.0
 
 runs:
   using: composite
@@ -68,4 +68,8 @@ runs:
         GOCOV_SERVER: ${{ inputs.server }}
         GOCOV_PART: ${{ inputs.part }}
         GOCOV_FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
+        # Marks uploads as coming from the action (vs the bare CLI) so the
+        # upload page's provenance shows "Action". Honored by gocov CLI
+        # v0.11.0+; older CLIs ignore it.
+        GOCOV_UPLOADER_KIND: action
       run: bash "$GITHUB_ACTION_PATH/upload.sh"
