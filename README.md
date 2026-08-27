@@ -8,6 +8,11 @@ Go, JavaScript/TypeScript (LCOV), Java (JaCoCo), Python (Cobertura) and more:
 PR diff coverage, commit statuses and a README badge, on the hosted service
 or your own server.
 
+Full documentation: [docs.gocov.dev](https://docs.gocov.dev) — in particular
+[uploading from CI](https://docs.gocov.dev/ci-upload/),
+[the coverage gate](https://docs.gocov.dev/coverage-gate/) and
+[parts](https://docs.gocov.dev/parts/) for matrix builds.
+
 ## Quickstart
 
 ```yaml
