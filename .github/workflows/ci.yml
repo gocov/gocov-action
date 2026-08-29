@@ -19,7 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: shellcheck install.sh upload.sh
+      - run: shellcheck install.sh upload.sh scripts/check-pins.sh
+      - name: Check version pins agree
+        run: ./scripts/check-pins.sh
 
   # Dogfooding: generate a real coverage profile from selftest/ and upload
   # it to the hosted service with the action itself — a live integration
