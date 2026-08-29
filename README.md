@@ -72,12 +72,26 @@ repo go to **Settings → Secrets and variables → Actions → New repository
 secret**, name it `GOCOV_TOKEN` and paste the token. That's the only setup
 step.
 
+### Pull requests from forks
+
+Fork PRs can't read your secrets, so `secrets.GOCOV_TOKEN` comes through
+empty on their `pull_request` runs — that's fine. On a **public** repo with
+the [gocov GitHub App](https://github.com/apps/gocov) installed, the action
+uploads tokenless: the server verifies the workflow run itself through the
+App, and the contributor gets the PR comment and check run with zero setup.
+No workflow change needed — the same snippet covers both cases.
+
+A tokenless upload never fails the build: if it's refused (App not
+installed, private repo, verification failed), the job logs the reason and
+carries on green. Details and limits:
+[fork PRs without a token](https://docs.gocov.dev/pull-requests/#fork-prs-without-a-token).
+
 ## Inputs
 
 | Input           | Required | Default                 | Description |
 |-----------------|----------|-------------------------|-------------|
 | `files`         | yes      | —                       | Coverage profile(s) to upload. Comma-separated, globs allowed (`coverage.out`, `cover/*.out`). |
-| `token`         | yes      | —                       | gocov upload token, from a repository secret. |
+| `token`         | no       | —                       | gocov upload token, from a repository secret. Required in practice — except on fork `pull_request` runs, where the empty secret triggers a tokenless upload (see above). |
 | `part`          | no       | —                       | Label for this upload when coverage is split across matrix jobs; the server merges parts for the same commit. |
 | `server`        | no       | `https://app.gocov.dev` | gocov server URL; override when self-hosting. |
 | `fail-on-error` | no       | `true`                  | Fail the workflow when install/upload fails. Set `false` to only warn. We default to honest failures — flip this if you'd rather never block CI on coverage upload. |
