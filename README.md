@@ -1,6 +1,6 @@
 # gocov-action
 
-![coverage](https://app.gocov.dev/badge/gocov/gocov-action.svg)
+[![coverage](https://app.gocov.dev/badge/gocov/gocov-action.svg)](https://app.gocov.dev/repos/gocov/gocov-action?ref=badge)
 ![ci](https://github.com/gocov/gocov-action/actions/workflows/ci.yml/badge.svg)
 
 Upload test coverage to [gocov](https://app.gocov.dev) from GitHub Actions —
@@ -28,7 +28,7 @@ Full documentation: [docs.gocov.dev](https://docs.gocov.dev) — in particular
 Then add the badge to your README:
 
 ```markdown
-![coverage](https://app.gocov.dev/badge/{workspace}/{repo}.svg)
+[![coverage](https://app.gocov.dev/badge/{workspace}/{repo}.svg)](https://app.gocov.dev/repos/{workspace}/{repo}?ref=badge)
 ```
 
 ### Splitting coverage across jobs (matrix)
