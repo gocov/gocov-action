@@ -22,10 +22,12 @@ inputs:
   token:
     description: >-
       gocov upload token for the repo. Store it as a repository secret
-      (GOCOV_TOKEN) and pass it via the secrets context. On pull_request
-      runs from forks the secret is empty by design — the upload then
-      goes tokenless, verified through the repo's gocov GitHub App
-      installation, and never fails the build.
+      (GOCOV_TOKEN) and pass it via the secrets context. Optional when the
+      job can upload without one: grant `permissions: id-token: write` and
+      the upload goes via OIDC (a signed identity token the server verifies)
+      on your own push and same-repo PR builds; on fork pull_request runs the
+      empty secret goes tokenless, verified through the repo's gocov GitHub
+      App installation. Neither ever fails the build.
     required: false
     default: ""
   part:

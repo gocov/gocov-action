@@ -20,18 +20,27 @@ fail() {
   exit 1
 }
 
-# Without a token, a pull_request run goes tokenless: fork PRs cannot read
-# secrets, and the CLI instead sends the workflow run's identity for the
-# server to verify through the repo's gocov GitHub App installation. The
-# CLI never exits non-zero in tokenless mode (a refusal is one readable
-# log line), so a fork contributor's build cannot break over coverage.
+# Without a token the CLI acquires the credential itself, in its own
+# precedence order:
+#   - OIDC: when the workflow granted `id-token: write`, GitHub exposes a
+#     mint endpoint to the job as $ACTIONS_ID_TOKEN_REQUEST_URL and
+#     $ACTIONS_ID_TOKEN_REQUEST_TOKEN — both, or neither. The CLI mints a
+#     signed identity token the server verifies. This is a normal upload: it
+#     honours fail-on-error, because the CLI already exits 0 on a clean OIDC
+#     refusal, so a non-zero exit here is a real error worth surfacing.
+#   - Tokenless: a fork pull_request has no secret and no id-token, so the
+#     CLI sends the workflow run's identity for the server to verify through
+#     the repo's gocov GitHub App installation. A fork contributor's build
+#     must never break over coverage, so this path alone is always soft.
 tokenless=0
 if [ -z "$GOCOV_TOKEN" ]; then
-  if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ]; then
+  if [ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ] && [ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+    echo "no token — uploading via OIDC (id-token permission), verified by the server"
+  elif [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ]; then
     tokenless=1
     echo "no token (fork pull request?) — uploading tokenless, verified via the gocov GitHub App"
   else
-    fail "no upload token: pass the 'token' input (add GOCOV_TOKEN as a repository secret — see the README)"
+    fail "no upload token: pass the 'token' input (a GOCOV_TOKEN repository secret), or grant 'permissions: id-token: write' to upload via OIDC — see the README"
   fi
 else
   # Secrets are masked by Actions already; mask again in case the token
@@ -68,13 +77,13 @@ failures=0
 for f in "${files[@]}"; do
   echo "uploading $f"
   if [ "$tokenless" = "1" ]; then
-    # Belt and braces for the tokenless promise: a CLI new enough to know
-    # tokenless mode already exits 0 on refusal, and a pre-tokenless CLI
-    # (an old `version` pin) exits 1 with "upload token required" — swallow
-    # that too rather than fail a contributor's build.
+    # A fork contributor's build must never break: a CLI new enough to know
+    # tokenless mode already exits 0 on refusal, and an older `version` pin
+    # exits 1 with "upload token required" — swallow that too.
     gocov upload ${args[@]+"${args[@]}"} "$f" ||
       echo "::notice title=gocov::tokenless upload of $f did not land — see the log above"
   else
+    # Token and OIDC uploads both honour fail-on-error via this accounting.
     gocov upload ${args[@]+"${args[@]}"} "$f" || failures=$((failures + 1))
   fi
 done
