@@ -72,6 +72,38 @@ repo go to **Settings → Secrets and variables → Actions → New repository
 secret**, name it `GOCOV_TOKEN` and paste the token. That's the only setup
 step.
 
+### Uploading without a token (OIDC)
+
+On your own repository's `push` and same-repo pull request builds you can skip
+the `GOCOV_TOKEN` secret altogether. Grant the workflow the `id-token: write`
+permission and leave `token` unset: the action asks GitHub for a short-lived,
+signed identity token that proves which repository the run belongs to, and the
+server verifies it. Nothing to create in the settings UI, nothing to rotate.
+
+```yaml
+permissions:
+  contents: read
+  id-token: write
+steps:
+  - run: go test ./... -covermode=atomic -coverprofile=coverage.out
+  - uses: gocov/gocov-action@v1
+    with:
+      files: coverage.out
+```
+
+The repository must already be tracked in a workspace connected through the
+[gocov GitHub App](https://github.com/apps/gocov) — the same connection that
+posts the PR comment and check run. OIDC replaces only the upload token;
+publishing still goes through that App identity, so the reported status is
+**not** marked unverified. A pasted `GOCOV_TOKEN` always takes precedence, so
+existing setups are untouched, and a rejected OIDC upload logs the reason and
+exits 0. Full details:
+[uploading without a token](https://docs.gocov.dev/github-actions/#uploading-without-a-token).
+
+> Requires the action's pinned gocov CLI to include OIDC support. If your
+> pinned default predates it, set the `version` input to a gocov release that
+> has it.
+
 ### Pull requests from forks
 
 Fork PRs can't read your secrets, so `secrets.GOCOV_TOKEN` comes through
@@ -91,7 +123,7 @@ carries on green. Details and limits:
 | Input           | Required | Default                 | Description |
 |-----------------|----------|-------------------------|-------------|
 | `files`         | yes      | —                       | Coverage profile(s) to upload. Comma-separated, globs allowed (`coverage.out`, `cover/*.out`). |
-| `token`         | no       | —                       | gocov upload token, from a repository secret. Required in practice — except on fork `pull_request` runs, where the empty secret triggers a tokenless upload (see above). |
+| `token`         | no       | —                       | gocov upload token, from a repository secret. Optional when the job can upload without one: via [OIDC](#uploading-without-a-token-oidc) (grant `id-token: write`) on your own builds, or a tokenless fork `pull_request` upload (see above). |
 | `part`          | no       | —                       | Label for this upload when coverage is split across matrix jobs; the server merges parts for the same commit. |
 | `server`        | no       | `https://app.gocov.dev` | gocov server URL; override when self-hosting. |
 | `fail-on-error` | no       | `true`                  | Fail the workflow when install/upload fails. Set `false` to only warn. We default to honest failures — flip this if you'd rather never block CI on coverage upload. |
