@@ -19,7 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: shellcheck install.sh upload.sh scripts/check-pins.sh
+      - run: shellcheck install.sh upload.sh scripts/check-pins.sh test/upload_test.sh
+      - name: upload.sh unit tests
+        run: bash test/upload_test.sh
       - name: Check version pins agree
         run: ./scripts/check-pins.sh
 

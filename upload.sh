@@ -20,28 +20,27 @@ fail() {
   exit 1
 }
 
-# Without a token the CLI acquires the credential itself, and never exits
-# non-zero doing so — a refusal is one readable log line — so a build cannot
-# break over coverage plumbing. Two secret-free paths, in the CLI's own
+# Without a token the CLI acquires the credential itself, in its own
 # precedence order:
-#   - OIDC: when the workflow granted `id-token: write`, the CLI mints a
-#     signed identity token the server verifies. Recommended for a repo's
-#     own push and same-repo PR builds. GitHub exposes the mint endpoint to
-#     the job as $ACTIONS_ID_TOKEN_REQUEST_TOKEN when the permission is set.
+#   - OIDC: when the workflow granted `id-token: write`, GitHub exposes a
+#     mint endpoint to the job as $ACTIONS_ID_TOKEN_REQUEST_URL and
+#     $ACTIONS_ID_TOKEN_REQUEST_TOKEN — both, or neither. The CLI mints a
+#     signed identity token the server verifies. This is a normal upload: it
+#     honours fail-on-error, because the CLI already exits 0 on a clean OIDC
+#     refusal, so a non-zero exit here is a real error worth surfacing.
 #   - Tokenless: a fork pull_request has no secret and no id-token, so the
 #     CLI sends the workflow run's identity for the server to verify through
-#     the repo's gocov GitHub App installation.
-# Either way a non-zero exit must not fail the build (soft=1).
-soft=0
+#     the repo's gocov GitHub App installation. A fork contributor's build
+#     must never break over coverage, so this path alone is always soft.
+tokenless=0
 if [ -z "$GOCOV_TOKEN" ]; then
-  if [ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
-    soft=1
+  if [ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ] && [ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
     echo "no token — uploading via OIDC (id-token permission), verified by the server"
   elif [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ]; then
-    soft=1
+    tokenless=1
     echo "no token (fork pull request?) — uploading tokenless, verified via the gocov GitHub App"
   else
-    fail "no upload token: pass the 'token' input (a GOCOV_TOKEN repository secret), or grant 'permissions: id-token: write' to upload tokenless via OIDC — see the README"
+    fail "no upload token: pass the 'token' input (a GOCOV_TOKEN repository secret), or grant 'permissions: id-token: write' to upload via OIDC — see the README"
   fi
 else
   # Secrets are masked by Actions already; mask again in case the token
@@ -77,14 +76,14 @@ args=()
 failures=0
 for f in "${files[@]}"; do
   echo "uploading $f"
-  if [ "$soft" = "1" ]; then
-    # Belt and braces for the secret-free promise: a CLI new enough to know
-    # OIDC/tokenless mode already exits 0 on refusal, and an older `version`
-    # pin exits 1 with "upload token required" — swallow that too rather
-    # than fail the build.
+  if [ "$tokenless" = "1" ]; then
+    # A fork contributor's build must never break: a CLI new enough to know
+    # tokenless mode already exits 0 on refusal, and an older `version` pin
+    # exits 1 with "upload token required" — swallow that too.
     gocov upload ${args[@]+"${args[@]}"} "$f" ||
-      echo "::notice title=gocov::upload of $f did not land — see the log above"
+      echo "::notice title=gocov::tokenless upload of $f did not land — see the log above"
   else
+    # Token and OIDC uploads both honour fail-on-error via this accounting.
     gocov upload ${args[@]+"${args[@]}"} "$f" || failures=$((failures + 1))
   fi
 done
