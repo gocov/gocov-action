@@ -37,6 +37,13 @@ inputs:
       uploaded for the same commit into one report.
     required: false
     default: ""
+  ignore:
+    description: >-
+      Glob patterns for files to leave out of the report, on top of the
+      repo's own ignore settings — comma-separated or one per line (e.g.
+      "cmd/preview/**,*_mock.go"). Needs a gocov CLI of v0.17.0 or later.
+    required: false
+    default: ""
   server:
     description: gocov server URL. Override when self-hosting.
     required: false
@@ -73,6 +80,11 @@ runs:
         GOCOV_TOKEN: ${{ inputs.token }}
         GOCOV_SERVER: ${{ inputs.server }}
         GOCOV_PART: ${{ inputs.part }}
+        # Not GOCOV_IGNORE: the CLI reads that name itself, and a workflow
+        # may set it at job level instead of the input. A step env of ""
+        # would shadow it, so the input travels under its own name and
+        # upload.sh turns it into -ignore only when it is set.
+        GOCOV_INPUT_IGNORE: ${{ inputs.ignore }}
         GOCOV_FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
         # Marks uploads as coming from the action (vs the bare CLI) so the
         # upload page's provenance shows "Action". Honored by gocov CLI

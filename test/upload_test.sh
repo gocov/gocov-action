@@ -29,7 +29,7 @@ OUT=""
 # always provides. Each case sets the rest before calling run.
 reset() {
   unset GOCOV_TOKEN GITHUB_EVENT_NAME FAKE_GOCOV_EXIT GOCOV_SKIP_UPLOAD \
-    ACTIONS_ID_TOKEN_REQUEST_TOKEN ACTIONS_ID_TOKEN_REQUEST_URL
+    ACTIONS_ID_TOKEN_REQUEST_TOKEN ACTIONS_ID_TOKEN_REQUEST_URL GOCOV_INPUT_IGNORE
   export GOCOV_FAIL_ON_ERROR=true GOCOV_SERVER=https://gocov.example GOCOV_PART=
 }
 
@@ -46,14 +46,28 @@ run() { # run <expected-exit> <description>
   fi
 }
 
-has() { grep -q -- "$1" <<<"$OUT" || { echo "  FAIL: output missing '$1'"; fails=$((fails + 1)); }; }
-lacks() { ! grep -q -- "$1" <<<"$OUT" || { echo "  FAIL: output should not contain '$1'"; fails=$((fails + 1)); }; }
+has() { grep -qF -- "$1" <<<"$OUT" || { echo "  FAIL: output missing '$1'"; fails=$((fails + 1)); }; }
+lacks() { ! grep -qF -- "$1" <<<"$OUT" || { echo "  FAIL: output should not contain '$1'"; fails=$((fails + 1)); }; }
 
 reset
 export GOCOV_TOKEN=secret
 run 0 "token upload succeeds"
 has "GOCOV_CALLED token=secret"
 lacks "uploading via OIDC"
+lacks "-ignore"
+
+# The ignore input becomes one -ignore flag; the CLI splits the list.
+reset
+export GOCOV_TOKEN=secret GOCOV_INPUT_IGNORE='cmd/preview/**,*_mock.go'
+run 0 "ignore input is passed as -ignore"
+has "args=upload -ignore cmd/preview/**,*_mock.go cov.out"
+
+# A job-level GOCOV_IGNORE reaches the CLI on its own; no input, no flag.
+reset
+export GOCOV_TOKEN=secret GOCOV_IGNORE='gen/**'
+run 0 "job-level GOCOV_IGNORE is left to the CLI"
+lacks "-ignore"
+unset GOCOV_IGNORE
 
 reset
 export GOCOV_TOKEN=secret FAKE_GOCOV_EXIT=1
