@@ -125,6 +125,7 @@ carries on green. Details and limits:
 | `files`         | yes      | —                       | Coverage profile(s) to upload. Comma-separated, globs allowed (`coverage.out`, `cover/*.out`). |
 | `token`         | no       | —                       | gocov upload token, from a repository secret. Optional when the job can upload without one: via [OIDC](#uploading-without-a-token-oidc) (grant `id-token: write`) on your own builds, or a tokenless fork `pull_request` upload (see above). |
 | `part`          | no       | —                       | Label for this upload when coverage is split across matrix jobs; the server merges parts for the same commit. |
+| `ignore`        | no       | —                       | Glob patterns for files to leave out of the report (`cmd/preview/**,*_mock.go`), on top of the repo's own settings — see [Ignoring files](#ignoring-files-ignore). |
 | `server`        | no       | `https://app.gocov.dev` | gocov server URL; override when self-hosting. |
 | `fail-on-error` | no       | `true`                  | Fail the workflow when install/upload fails. Set `false` to only warn. We default to honest failures — flip this if you'd rather never block CI on coverage upload. |
 | `version`       | no       | pinned per release      | gocov CLI version to download ([gocov/gocov release tag](https://github.com/gocov/gocov/releases)). Each action release pins the CLI version it was tested against. |
@@ -133,6 +134,28 @@ Linux, macOS and Windows runners are supported, on amd64 and arm64. The
 CLI binary is downloaded only from `github.com/gocov/gocov/releases` and
 verified against the release's sha256 checksums; the action has no
 third-party action dependencies.
+
+## Ignoring files (`ignore`)
+
+Keep generated code, mocks or dev tooling out of the number without touching
+the test command:
+
+```yaml
+- uses: gocov/gocov-action@v1
+  with:
+    files: coverage.out
+    ignore: |
+      cmd/preview/**
+      **/*.pb.go
+      *_mock.go
+```
+
+Patterns are globs in the `.gitignore` spirit, matched against the paths in
+the report (for Go profiles the module path is stripped first). They add to
+whatever the repository's **Ignored files** setting already lists. Syntax and
+details: [Ignoring files](https://docs.gocov.dev/ignoring-files/). Needs a
+gocov CLI of v0.17.0 or later — the pinned default from the action release
+that introduced the input onwards.
 
 ## Matrix builds (`part`)
 

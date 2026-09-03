@@ -72,6 +72,9 @@ done
 
 args=()
 [ -n "${GOCOV_PART:-}" ] && args+=(-part "$GOCOV_PART")
+# One -ignore carries the whole list: the CLI splits on commas and
+# newlines, so a multi-line YAML input arrives intact.
+[ -n "${GOCOV_INPUT_IGNORE:-}" ] && args+=(-ignore "$GOCOV_INPUT_IGNORE")
 
 failures=0
 for f in "${files[@]}"; do
