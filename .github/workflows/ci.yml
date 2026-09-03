@@ -18,7 +18,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: shellcheck install.sh upload.sh scripts/check-pins.sh test/upload_test.sh
       - name: upload.sh unit tests
         run: bash test/upload_test.sh
@@ -39,8 +39,8 @@ jobs:
       # secrets isn't available in step-level `if`, so surface the check here.
       HAVE_GOCOV_TOKEN: ${{ secrets.GOCOV_TOKEN != '' }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: stable
 
