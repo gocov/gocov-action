@@ -36,10 +36,15 @@ base="https://github.com/gocov/gocov/releases/download/$GOCOV_VERSION"
 dir="$RUNNER_TEMP/gocov-cli"
 mkdir -p "$dir"
 
+# --retry alone only retries a few transient failures (timeouts, some
+# 5xx); --retry-all-errors also retries connection resets and other
+# transport errors, which GitHub's release CDN produces now and then
+# (curl: (35) Send failure: Connection was reset). -f keeps HTTP errors
+# such as a missing asset failing after the retries are exhausted.
 echo "downloading $base/$asset"
-curl -fsSL --retry 3 --retry-delay 2 -o "$dir/$asset" "$base/$asset" ||
+curl -fsSL --retry 3 --retry-delay 3 --retry-all-errors -o "$dir/$asset" "$base/$asset" ||
   fail "could not download $asset from gocov/gocov release $GOCOV_VERSION"
-curl -fsSL --retry 3 --retry-delay 2 -o "$dir/checksums.txt" "$base/checksums.txt" ||
+curl -fsSL --retry 3 --retry-delay 3 --retry-all-errors -o "$dir/checksums.txt" "$base/checksums.txt" ||
   fail "could not download checksums.txt from gocov/gocov release $GOCOV_VERSION"
 
 # gsub strips the "\" that sha256sum prefixes in its escaped output
