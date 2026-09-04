@@ -91,9 +91,11 @@ steps:
       files: coverage.out
 ```
 
-The repository must already be tracked in a workspace connected through the
+The repository's workspace (its GitHub org or user) must already be
+registered on gocov and connected through the
 [gocov GitHub App](https://github.com/apps/gocov) — the same connection that
-posts the PR comment and check run. OIDC replaces only the upload token;
+posts the PR comment and check run. The repository itself needs no setup: its
+first OIDC upload registers it. OIDC replaces only the upload token;
 publishing still goes through that App identity, so the reported status is
 **not** marked unverified. A pasted `GOCOV_TOKEN` always takes precedence, so
 existing setups are untouched, and a rejected OIDC upload logs the reason and
