@@ -59,7 +59,7 @@ inputs:
       gocov CLI version to download, as a gocov/gocov release tag. The
       default is the version this action release was tested against.
     required: false
-    default: v0.19.0
+    default: v0.20.0
 
 runs:
   using: composite
