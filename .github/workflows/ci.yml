@@ -25,11 +25,13 @@ jobs:
       - name: Check version pins agree
         run: ./scripts/check-pins.sh
 
-  # Dogfooding: generate a real coverage profile from selftest/ and upload
-  # it to the hosted service with the action itself — a live integration
-  # test on every runner OS we claim to support. Upload steps are skipped
-  # on forks, where the GOCOV_TOKEN secret isn't available.
-  selftest:
+  # End to end, dogfooding: generate a real coverage profile from
+  # selftest/ and upload it to the hosted service with the action itself —
+  # a live integration test on every runner OS we claim to support. The
+  # same job name (`e2e`) as upload-pipe's and gitlab-component's, which
+  # gocov's release requires before it auto-merges a bump PR. Upload steps
+  # are skipped on forks, where the GOCOV_TOKEN secret isn't available.
+  e2e:
     strategy:
       fail-fast: false
       matrix:

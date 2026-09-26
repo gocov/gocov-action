@@ -1,6 +1,7 @@
 name: release
 
-# On a semver tag push (v1.2.3): create the GitHub release and move the
+# On a semver tag push (v1.2.3): create the GitHub release (its notes are
+# the version's CHANGELOG.md entry) and move the
 # floating major tag (v1) to it, which is what `uses: gocov/gocov-action@v1`
 # resolves. The first release is published to the Marketplace manually by
 # ticking "Publish this Action to the GitHub Marketplace" on the release.
@@ -34,9 +35,14 @@ jobs:
           ref: ${{ inputs.tag || github.ref_name }}
 
       - name: Create release
+        # The notes are the version's CHANGELOG.md entry, as in upload-pipe
+        # and gitlab-component.
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$TAG" --title "$TAG" --generate-notes
+        run: |
+          awk -v v="${TAG#v}" '/^## /{f = ($2 == v); next} f' CHANGELOG.md >notes.md
+          [ -s notes.md ] || { echo "CHANGELOG.md has no '## ${TAG#v}' entry" >&2; exit 1; }
+          gh release create "$TAG" --title "$TAG" --notes-file notes.md
 
       - name: Move major tag
         run: |

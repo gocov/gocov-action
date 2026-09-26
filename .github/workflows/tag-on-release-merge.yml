@@ -2,8 +2,8 @@ name: tag-on-release-merge
 
 # The merge half of the cross-repo bump: a gocov release opens a bump PR
 # here carrying the `release` label, and merging that PR is the release
-# decision — so this tags the next minor on the merge commit and runs the
-# release workflow. The tag is pushed with GITHUB_TOKEN, which starts no
+# decision — so this tags the merge commit with the version the PR's
+# CHANGELOG.md entry names and runs the release workflow. The tag is pushed with GITHUB_TOKEN, which starts no
 # workflow runs, so release.yml is called directly rather than trusting
 # the tag event (the same pattern gocov's release-please path uses).
 #
@@ -32,19 +32,21 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Compute the next minor
+      - name: Read the version CHANGELOG.md releases
         id: next
-        # The action's version lives nowhere in the tree — a CLI bump has
-        # always been a minor release, so the next version is derived from
-        # the newest existing tag.
+        # The newest `## X.Y.Z` heading is the release, as in upload-pipe
+        # and gitlab-component: the bump PR writes it, and the tag is that
+        # version with the v every action tag carries.
         run: |
-          latest=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -1)
-          [ -n "$latest" ] || { echo "no existing release tags found" >&2; exit 1; }
-          major=${latest%%.*}
-          rest=${latest#*.}
-          tag="$major.$(( ${rest%%.*} + 1 )).0"
+          version=$(sed -n 's/^## \([0-9][0-9.]*\) *$/\1/p' CHANGELOG.md | head -1)
+          [ -n "$version" ] || { echo "no '## X.Y.Z' heading in CHANGELOG.md" >&2; exit 1; }
+          tag="v$version"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "tag $tag already exists — did the bump PR forget its CHANGELOG entry?" >&2
+            exit 1
+          fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "releasing $tag (latest was $latest)"
+          echo "releasing $tag"
 
       - name: Tag the merge commit
         run: |
