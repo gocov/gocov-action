@@ -49,11 +49,15 @@ jobs:
           echo "releasing $tag"
 
       - name: Tag the merge commit
+        # Values reach the shell through env, never spliced into the script.
+        env:
+          TAG: ${{ steps.next.outputs.tag }}
+          SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "${{ steps.next.outputs.tag }}" "${{ github.event.pull_request.merge_commit_sha }}"
-          git push origin "refs/tags/${{ steps.next.outputs.tag }}"
+          git tag "$TAG" "$SHA"
+          git push origin "refs/tags/$TAG"
 
   release:
     needs: tag
