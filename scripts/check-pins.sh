@@ -51,4 +51,21 @@ if [ -n "$bad" ]; then
   exit 1
 fi
 
-echo "check-pins: CLI pinned at $default in action.yml; $(echo "$pins" | grep -c . | tr -d " ") other pin(s) agree"
+# The newest CHANGELOG.md entry is the release the next merge tags, and
+# names the CLI it pins in the phrase every entry uses — "Pin gocov CLI
+# v0.26.1 (was v0.26.0)". Only the first "gocov CLI vX" is matched, not the
+# version it replaces. An entry that changes nothing about the CLI need
+# not name one; one that contradicts action.yml fails. The same check runs
+# in upload-pipe and gitlab-component.
+version=$(sed -n 's/^## \([0-9][0-9.]*\) *$/\1/p' CHANGELOG.md | head -1)
+if [ -z "$version" ]; then
+  echo "check-pins: no '## X.Y.Z' heading in CHANGELOG.md." >&2
+  exit 1
+fi
+claimed=$(awk '/^## /{n++} n==1' CHANGELOG.md | sed -n 's/.*gocov CLI \(v[0-9][0-9.]*[0-9]\).*/\1/p' | head -1)
+if [ -n "$claimed" ] && [ "$claimed" != "$default" ]; then
+  echo "check-pins: CHANGELOG.md's $version entry says it pins $claimed, but action.yml pins $default." >&2
+  exit 1
+fi
+
+echo "check-pins: CLI pinned at $default in action.yml${claimed:+ (as CHANGELOG.md $version says)}; $(echo "$pins" | grep -c . | tr -d " ") other pin(s) agree"
