@@ -1,0 +1,11 @@
+# zizmor (the workflow audit in ci.yml's lint job), set up as in gocov.
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # GitHub's own actions and gocov's are referenced by tag; any
+        # third-party action is pinned to a commit, with the version in a
+        # comment that Dependabot keeps current.
+        "actions/*": ref-pin
+        "gocov/*": ref-pin
+        "*": hash-pin
