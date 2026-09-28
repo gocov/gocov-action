@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.24.0
+
+- Pin gocov CLI v0.27.0 (was v0.26.4).
+
 ## 1.23.0
 
 - Pin gocov CLI v0.26.4 (was v0.26.3).
