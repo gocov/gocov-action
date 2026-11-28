@@ -21,9 +21,9 @@ inputs:
     required: true
   token:
     description: >-
-      gocov upload token for the repo. Store it as a repository secret
-      (GOCOV_TOKEN) and pass it via the secrets context. Optional when the
-      job can upload without one: grant `permissions: id-token: write` and
+      The workspace's gocov upload token. Store it as an organization or
+      repository secret (GOCOV_TOKEN) and pass it via the secrets context.
+      Optional when the job can upload without one: grant `permissions: id-token: write` and
       the upload goes via OIDC (a signed identity token the server verifies)
       on your own push and same-repo PR builds; on fork pull_request runs the
       empty secret goes tokenless, verified through the repo's gocov GitHub
@@ -41,7 +41,7 @@ inputs:
     description: >-
       Glob patterns for files to leave out of the report, on top of the
       repo's own ignore settings — comma-separated or one per line (e.g.
-      "cmd/preview/**,*_mock.go"). Needs a gocov CLI of v0.17.0 or later.
+      "cmd/preview/**,*_mock.go").
     required: false
     default: ""
   server:

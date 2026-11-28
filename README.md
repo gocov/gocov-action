@@ -4,26 +4,41 @@
 ![ci](https://github.com/gocov/gocov-action/actions/workflows/ci.yml/badge.svg)
 
 Upload test coverage to [gocov](https://app.gocov.dev) from GitHub Actions —
-Go, JavaScript/TypeScript (LCOV), Java (JaCoCo), Python (Cobertura) and more:
-PR diff coverage, commit statuses and a README badge, on the hosted service
-or your own server.
+Go, JavaScript/TypeScript, Java, Python, .NET, Swift and
+[more](https://docs.gocov.dev/languages/), with the format detected from the
+file: PR diff coverage, commit statuses and a README badge, on the hosted
+service or your own server.
 
 Full documentation: [docs.gocov.dev](https://docs.gocov.dev) — in particular
-[uploading from CI](https://docs.gocov.dev/ci-upload/),
+[GitHub Actions](https://docs.gocov.dev/github-actions/),
 [the coverage gate](https://docs.gocov.dev/coverage-gate/) and
 [parts](https://docs.gocov.dev/parts/) for matrix builds.
 
 ## Quickstart
 
+Grant the job `id-token: write` and it needs no secret at all:
+
 ```yaml
-- uses: actions/checkout@v4
-- uses: actions/setup-go@v5
-- run: go test -coverprofile=coverage.out ./...
-- uses: gocov/gocov-action@v1
-  with:
-    files: coverage.out
-    token: ${{ secrets.GOCOV_TOKEN }}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+      - run: go test -covermode=atomic -coverprofile=coverage.out ./...
+      - uses: gocov/gocov-action@v1
+        with:
+          files: coverage.out
 ```
+
+For another language, only the test command and the `files:` path change —
+[Languages & formats](https://docs.gocov.dev/languages/) lists what each test
+tool writes.
 
 Then add the badge to your README:
 
@@ -31,65 +46,13 @@ Then add the badge to your README:
 [![coverage](https://app.gocov.dev/badge/github/{workspace}/{repo}.svg)](https://app.gocov.dev/repos/github/{workspace}/{repo}?ref=badge)
 ```
 
-### Splitting coverage across jobs (matrix)
-
-When a commit's coverage comes from several jobs — a Go backend, a
-JS/TS frontend, an e2e suite — give each upload a `part`. gocov merges the
-parts uploaded for the same commit into one report, so the status, badge,
-gate and PR comment reflect the combined total instead of whichever job
-finished last:
-
-```yaml
-jobs:
-  backend:
-    steps:
-      - uses: actions/checkout@v4
-      - run: go test -coverprofile=coverage.out ./...
-      - uses: gocov/gocov-action@v1
-        with:
-          files: coverage.out
-          token: ${{ secrets.GOCOV_TOKEN }}
-          part: backend
-  frontend:
-    steps:
-      - uses: actions/checkout@v4
-      - run: npm test -- --coverage       # writes coverage/lcov.info
-      - uses: gocov/gocov-action@v1
-        with:
-          files: coverage/lcov.info
-          token: ${{ secrets.GOCOV_TOKEN }}
-          part: frontend
-```
-
-Re-running a job replaces its part rather than double-counting. Uploads with
-no `part` land in a single `default` bucket, so single-job setups are
-unchanged.
-
-### Adding the token
-
-Grab the repo's upload token from the gocov dashboard, then in your GitHub
-repo go to **Settings → Secrets and variables → Actions → New repository
-secret**, name it `GOCOV_TOKEN` and paste the token. That's the only setup
-step.
-
 ### Uploading without a token (OIDC)
 
-On your own repository's `push` and same-repo pull request builds you can skip
-the `GOCOV_TOKEN` secret altogether. Grant the workflow the `id-token: write`
-permission and leave `token` unset: the action asks GitHub for a short-lived,
-signed identity token that proves which repository the run belongs to, and the
-server verifies it. Nothing to create in the settings UI, nothing to rotate.
-
-```yaml
-permissions:
-  contents: read
-  id-token: write
-steps:
-  - run: go test ./... -covermode=atomic -coverprofile=coverage.out
-  - uses: gocov/gocov-action@v1
-    with:
-      files: coverage.out
-```
+With `id-token: write` granted and `token` left unset, the action asks GitHub
+for a short-lived, signed identity token that proves which repository the run
+belongs to, and the server verifies it. Nothing to create in the settings UI,
+nothing to rotate. This covers your own repository's `push` and same-repo pull
+request builds.
 
 The repository's workspace (its GitHub org or user) must already be
 registered on gocov and connected through the
@@ -97,20 +60,34 @@ registered on gocov and connected through the
 posts the PR comment and check run. The repository itself needs no setup: its
 first OIDC upload registers it. OIDC replaces only the upload token;
 publishing still goes through that App identity, so the reported status is
-**not** marked unverified. A pasted `GOCOV_TOKEN` always takes precedence, so
-existing setups are untouched, and a rejected OIDC upload logs the reason and
-exits 0. Full details:
+**not** marked unverified. A rejected OIDC upload logs the reason and exits 0.
+Full details:
 [uploading without a token](https://docs.gocov.dev/github-actions/#uploading-without-a-token).
 
-> Requires the action's pinned gocov CLI to include OIDC support. If your
-> pinned default predates it, set the `version` input to a gocov release that
-> has it.
+### Using an upload token instead
+
+If you'd rather use a secret, the workspace has an upload token: owners can
+reveal and rotate it in the workspace settings on gocov, under *Uploads*. In
+GitHub, add it as an organization secret (or a repository secret: **Settings →
+Secrets and variables → Actions → New repository secret**) named
+`GOCOV_TOKEN`, and pass it to the action:
+
+```yaml
+- uses: gocov/gocov-action@v1
+  with:
+    files: coverage.out
+    token: ${{ secrets.GOCOV_TOKEN }}
+```
+
+A token always takes precedence over the identity token, so existing setups
+are untouched; the job then needs no `id-token` permission.
 
 ### Pull requests from forks
 
-Fork PRs can't read your secrets, so `secrets.GOCOV_TOKEN` comes through
-empty on their `pull_request` runs — that's fine. On a **public** repo with
-the [gocov GitHub App](https://github.com/apps/gocov) installed, the action
+Fork PRs can't read your secrets and get no identity token, so on their
+`pull_request` runs neither form above has anything to upload with — that's
+fine. On a **public** repo with the
+[gocov GitHub App](https://github.com/apps/gocov) installed, the action
 uploads tokenless: the server verifies the workflow run itself through the
 App, and the contributor gets the PR comment and check run with zero setup.
 No workflow change needed — the same snippet covers both cases.
@@ -125,17 +102,88 @@ carries on green. Details and limits:
 | Input           | Required | Default                 | Description |
 |-----------------|----------|-------------------------|-------------|
 | `files`         | yes      | —                       | Coverage profile(s) to upload. Comma-separated, globs allowed (`coverage.out`, `cover/*.out`). |
-| `token`         | no       | —                       | gocov upload token, from a repository secret. Optional when the job can upload without one: via [OIDC](#uploading-without-a-token-oidc) (grant `id-token: write`) on your own builds, or a tokenless fork `pull_request` upload (see above). |
-| `part`          | no       | —                       | Label for this upload when coverage is split across matrix jobs; the server merges parts for the same commit. |
+| `token`         | no       | —                       | gocov upload token, from a `GOCOV_TOKEN` secret. Leave it unset to upload via [OIDC](#uploading-without-a-token-oidc) (grant `id-token: write`) on your own builds; fork `pull_request` runs upload [tokenless](#pull-requests-from-forks). |
+| `part`          | no       | —                       | Label for this upload when coverage is split across jobs; the server merges parts for the same commit — see [Several jobs per commit](#several-jobs-per-commit-part). |
 | `ignore`        | no       | —                       | Glob patterns for files to leave out of the report (`cmd/preview/**,*_mock.go`), on top of the repo's own settings — see [Ignoring files](#ignoring-files-ignore). |
 | `server`        | no       | `https://app.gocov.dev` | gocov server URL; override when self-hosting. |
 | `fail-on-error` | no       | `true`                  | Fail the workflow when install/upload fails. Set `false` to only warn. We default to honest failures — flip this if you'd rather never block CI on coverage upload. |
-| `version`       | no       | pinned per release      | gocov CLI version to download ([gocov/gocov release tag](https://github.com/gocov/gocov/releases)). Each action release pins the CLI version it was tested against. |
+| `version`       | no       | pinned per release      | gocov CLI version to download ([gocov/gocov release tag](https://github.com/gocov/gocov/releases)). Each action release pins the CLI version it was tested against; everything in this README assumes that default, and an older release may not support every input or OIDC. |
 
 Linux, macOS and Windows runners are supported, on amd64 and arm64. The
 CLI binary is downloaded only from `github.com/gocov/gocov/releases` and
 verified against the release's sha256 checksums; the action has no
 third-party action dependencies.
+
+## Several jobs per commit (`part`)
+
+When a commit's coverage comes from several jobs — a Go backend, a JS/TS
+frontend, the shards of a test matrix — give each upload a `part`. gocov
+merges the parts uploaded for the same commit into one report, so the status,
+badge, gate and PR comment reflect the combined total instead of whichever job
+finished last. Separate jobs for separate languages:
+
+```yaml
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+      - run: go test -coverprofile=coverage.out ./...
+      - uses: gocov/gocov-action@v1
+        with:
+          files: coverage.out
+          part: backend
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: npm ci
+      - run: npm test -- --coverage       # writes coverage/lcov.info
+      - uses: gocov/gocov-action@v1
+        with:
+          files: coverage/lcov.info
+          part: frontend
+```
+
+Or one job split into matrix shards, each its own part:
+
+```yaml
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      matrix:
+        include:
+          - shard: unit
+            tests: TestUnit
+          - shard: integration
+            tests: TestIntegration
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+      - run: go test -coverprofile=coverage.out -run '${{ matrix.tests }}' ./...
+      - uses: gocov/gocov-action@v1
+        with:
+          files: coverage.out
+          part: ${{ matrix.shard }}
+```
+
+Re-running a job replaces its part rather than double-counting. Uploads with
+no `part` land in a single `default` bucket, so single-job setups are
+unchanged. Parts are merged as they arrive, so until the last one lands the
+total can read low. Details: [parts](https://docs.gocov.dev/parts/).
 
 ## Ignoring files (`ignore`)
 
@@ -155,35 +203,7 @@ the test command:
 Patterns are globs in the `.gitignore` spirit, matched against the paths in
 the report (for Go profiles the module path is stripped first). They add to
 whatever the repository's **Ignored files** setting already lists. Syntax and
-details: [Ignoring files](https://docs.gocov.dev/ignoring-files/). Needs a
-gocov CLI of v0.17.0 or later — the pinned default from the action release
-that introduced the input onwards.
-
-## Matrix builds (`part`)
-
-When tests are split across jobs, upload each job's profile with a distinct
-`part` and the server merges them into one report for the commit:
-
-```yaml
-jobs:
-  test:
-    strategy:
-      matrix:
-        shard: [unit, integration]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-      - run: go test -coverprofile=coverage.out ./... -run "${{ matrix.shard == 'unit' && 'TestUnit' || 'TestIntegration' }}"
-      - uses: gocov/gocov-action@v1
-        with:
-          files: coverage.out
-          token: ${{ secrets.GOCOV_TOKEN }}
-          part: ${{ matrix.shard }}
-```
-
-`part` requires a gocov CLI version with multi-part upload support; set the
-`version` input if the action's default pin doesn't include it yet.
+details: [Ignoring files](https://docs.gocov.dev/ignoring-files/).
 
 ## Self-hosting
 
@@ -194,9 +214,11 @@ it:
 - uses: gocov/gocov-action@v1
   with:
     files: coverage.out
-    token: ${{ secrets.GOCOV_TOKEN }}
     server: https://gocov.example.com
 ```
+
+Uploads authenticate as above: OIDC, whose identity token is minted for the
+`server` you set, or a `GOCOV_TOKEN` from your instance passed as `token`.
 
 ## Versioning
 
